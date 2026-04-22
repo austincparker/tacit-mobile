@@ -1,0 +1,62 @@
+name: Dependency Cooldown Check
+
+on:
+  workflow_call:
+    inputs:
+      days:
+        description: 'Cooldown period in days (how old a dependency must be)'
+        required: false
+        type: number
+        default: 7
+      allowlist:
+        description: 'Newline-separated list of packages to skip (e.g., "flutter_lints\nmockito")'
+        required: false
+        type: string
+        default: ''
+      include_transitive:
+        description: 'Check all dependencies including transitive ones (slower, more thorough)'
+        required: false
+        type: boolean
+        default: false
+      base_ref:
+        description: 'Git ref to compare against for detecting updates (default: origin/main)'
+        required: false
+        type: string
+        default: 'origin/main'
+      security_bypass:
+        description: 'Automatically allow updates that fix security vulnerabilities'
+        required: false
+        type: boolean
+        default: true
+      minor_bypass:
+        description: 'Automatically allow minor/patch version updates (same major version)'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  dependency_cooldown_check:
+    name: Dependency Cooldown Check
+    runs-on: [runs-on,runner=2cpu-linux-x64,"run-id=${{ github.run_id }}"]
+    container:
+      image: python:3.12-slim
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch origin main:refs/remotes/origin/main || true
+
+      - name: Run Dependency Cooldown Check
+        run: |
+          python3 bin/dependency_cooldown_check \
+            --days ${{ inputs.days }} \
+            --allowlist "${{ inputs.allowlist }}" \
+            --base-ref "${{ inputs.base_ref }}" \
+            ${{ inputs.include_transitive && '--include-transitive' || '' }} \
+            ${{ inputs.security_bypass == false && '--no-security-bypass' || '' }} \
+            ${{ inputs.minor_bypass == false && '--no-minor-bypass' || '' }}

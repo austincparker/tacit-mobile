@@ -1,0 +1,52 @@
+default_platform(:ios)
+
+platform :ios do
+  desc 'Update iOS signing'
+  lane :update_signing do
+    sync_code_signing(type: 'appstore', app_identifier: ['dev.twinsun.flutterAppBase', 'dev.twinsun.flutterAppBase.staging'])
+  end
+
+  desc 'Update iOS development signing'
+  lane :update_development_signing do
+    sync_code_signing(type: 'development', app_identifier: ['dev.twinsun.flutterAppBase', 'dev.twinsun.flutterAppBase.staging'])
+  end
+  desc 'Push a new staging build to TestFlight'
+  lane :staging do
+    use_custom_keychain = !system('uname -a | grep dathomir') # custom keychain doesn't work on dathomir for reasons
+    keychain_name = nil
+    keychain_password = nil
+    if use_custom_keychain
+      keychain_name = 'flutterAppBase'
+      keychain_password = ENV['KEYCHAIN_PASSWORD']
+      create_keychain name: keychain_name, unlock: true, timeout: 0, password: keychain_password
+    end
+
+    sync_code_signing(type: 'appstore', readonly: true, app_identifier: 'dev.twinsun.flutterAppBase.staging',
+                      keychain_name: keychain_name, keychain_password: keychain_password)
+    build_app(workspace: 'Runner.xcworkspace', scheme: 'Runner',
+              export_options: { method: 'app-store', provisioningProfiles: { 'dev.twinsun.flutterAppBase.staging' => 'match AppStore dev.twinsun.flutterAppBase.staging' }, signingCertificate: 'Apple Distribution: Twin Sun, LLC (6Z8YVY449D)' }, codesigning_identity: 'Apple Distribution: Twin Sun, LLC (6Z8YVY449D)', include_symbols: false)
+    upload_to_testflight(wait_for_uploaded_build: true, skip_waiting_for_build_processing: true,
+                         app_identifier: 'dev.twinsun.flutterAppBase.staging', username: 'admin@twinsunsolutions.com')
+    upload_symbols_to_crashlytics()
+  end
+
+  desc 'Push a new production build to TestFlight'
+  lane :production do
+    use_custom_keychain = !system('uname -a | grep dathomir') # custom keychain doesn't work on dathomir for reasons
+    keychain_name = nil
+    keychain_password = nil
+    if use_custom_keychain
+      keychain_name = 'flutterAppBase'
+      keychain_password = ENV['KEYCHAIN_PASSWORD']
+      create_keychain name: keychain_name, unlock: true, timeout: 0, password: keychain_password
+    end
+
+    sync_code_signing(type: 'appstore', readonly: true, app_identifier: 'dev.twinsun.flutterAppBase',
+                      keychain_name: keychain_name, keychain_password: keychain_password)
+    build_app(workspace: 'Runner.xcworkspace', scheme: 'Runner',
+              export_options: { method: 'app-store', provisioningProfiles: { 'dev.twinsun.flutterAppBase' => 'match AppStore dev.twinsun.flutterAppBase' }, signingCertificate: 'Apple Distribution: Twin Sun, LLC (6Z8YVY449D)' }, codesigning_identity: 'Apple Distribution: Twin Sun, LLC (6Z8YVY449D)', include_symbols: false)
+    upload_to_testflight(wait_for_uploaded_build: true, skip_waiting_for_build_processing: true,
+                         app_identifier: 'dev.twinsun.flutterAppBase', username: 'admin@twinsunsolutions.com')
+    upload_symbols_to_crashlytics()
+  end
+end

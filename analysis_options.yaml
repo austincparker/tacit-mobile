@@ -1,0 +1,40 @@
+# https://dart.dev/tools/linter-rules#error-rules
+include: package:flutter_lints/flutter.yaml
+
+formatter: 
+  trailing_commas: preserve
+
+linter:
+  rules:
+    # Error
+    - always_use_package_imports
+    - cancel_subscriptions
+    # Style
+    - always_declare_return_types
+    - avoid_multiple_declarations_per_line
+    - avoid_redundant_argument_values
+    - avoid_unused_constructor_parameters
+    - avoid_void_async
+    - directives_ordering
+    - join_return_with_assignment
+    - omit_local_variable_types
+    - prefer_final_in_for_each
+    - prefer_final_locals
+    - prefer_if_elements_to_conditional_expressions
+    - prefer_null_aware_method_calls
+    - prefer_single_quotes
+    - require_trailing_commas
+    - sort_unnamed_constructors_first
+    - type_annotate_public_apis
+    - unnecessary_await_in_return
+    - unnecessary_breaks
+    - unnecessary_lambdas
+    - use_colored_box
+    - use_decorated_box
+    - use_enums
+    - use_if_null_to_convert_nulls_to_bools
+    - use_is_even_rather_than_modulo
+    - use_named_constants
+    - use_raw_strings
+    # Pub
+    - sort_pub_dependencies

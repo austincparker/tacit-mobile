@@ -1,0 +1,166 @@
+{
+  "project_info": {
+    "project_number": "548746061485",
+    "project_id": "holonet-api-347016",
+    "storage_bucket": "holonet-api-347016.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:548746061485:android:9eb6dabbb92ab970450824",
+        "android_client_info": {
+          "package_name": "dev.twinsun.austin_training_project"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "548746061485-1ol5a496vq9ukn1ju5bn3810pd1e9699.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.twinsun.austin_training_project",
+            "certificate_hash": "e9ce3cc5f201a3ada8c60dcf4a323d9f793cb991"
+          }
+        },
+        {
+          "client_id": "548746061485-dqcq2kho27uda06olbjpnuusbd93leha.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.twinsun.austin_training_project",
+            "certificate_hash": "ed8ebd65bd1fde7ac8fde04db1b1013b6e5b9c6e"
+          }
+        },
+        {
+          "client_id": "548746061485-s595bgot6lki4ag97u5f6umhjn7erkv8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.twinsun.austin_training_project",
+            "certificate_hash": "2a5d23d8ffd80441c0f3ba65612b75876027fe61"
+          }
+        },
+        {
+          "client_id": "548746061485-896kdcb9plsvkuqtprkoq51nv1su7hve.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkkfQfA7At9J7Q2A-1brShO3r-UY4A9FM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "548746061485-896kdcb9plsvkuqtprkoq51nv1su7hve.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "548746061485-cq1h6c0sfgcf2m52j983c4ekbv39998i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "dev.twinsun.flutterAppBase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:548746061485:android:71905375df6e53cd450824",
+        "android_client_info": {
+          "package_name": "dev.twinsun.flutter_app_base"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "548746061485-jok21mntr6511lpr7ose07kqnhf5jb7s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.twinsun.flutter_app_base",
+            "certificate_hash": "f3c59dfc69c42bccb0fedf8c01e8d56f6c18be6c"
+          }
+        },
+        {
+          "client_id": "548746061485-896kdcb9plsvkuqtprkoq51nv1su7hve.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkkfQfA7At9J7Q2A-1brShO3r-UY4A9FM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "548746061485-896kdcb9plsvkuqtprkoq51nv1su7hve.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "548746061485-cq1h6c0sfgcf2m52j983c4ekbv39998i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "dev.twinsun.flutterAppBase"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:548746061485:android:ddbd04a6be5c8be0450824",
+        "android_client_info": {
+          "package_name": "dev.twinsun.pmp_training_project"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "548746061485-u9tg0oddt9tbpf2pdskcd2v80q8b4djk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.twinsun.pmp_training_project",
+            "certificate_hash": "f3c59dfc69c42bccb0fedf8c01e8d56f6c18be6c"
+          }
+        },
+        {
+          "client_id": "548746061485-vcd0i67koee6j1ktimad5b3iavcjvn1s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.twinsun.pmp_training_project",
+            "certificate_hash": "bf9c171b7d10face8645a3afaf6c42cbd42e189e"
+          }
+        },
+        {
+          "client_id": "548746061485-896kdcb9plsvkuqtprkoq51nv1su7hve.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkkfQfA7At9J7Q2A-1brShO3r-UY4A9FM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "548746061485-896kdcb9plsvkuqtprkoq51nv1su7hve.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "548746061485-cq1h6c0sfgcf2m52j983c4ekbv39998i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "dev.twinsun.flutterAppBase"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,42 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Local API)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "staging", "--dart-define=USE_LOCAL_API=true"]
+    },
+    {
+      "name": "Flutter (Staging)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "staging"]
+    },
+    {
+      "name": "Flutter (Production)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main-production.dart",
+      "args": ["--flavor", "production"]
+    },
+    {
+      "name": "Flutter (Default)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart"
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Chrome against localhost",
+      "url": "http://localhost:8080",
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}

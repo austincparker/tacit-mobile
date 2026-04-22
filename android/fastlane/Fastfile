@@ -1,0 +1,63 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  desc 'Submit a new Beta Build to Fastlane'
+  lane :staging_firebase do
+    raise 'Update your Fastfile to deploy to a different firebase app' if ENV['GITHUB_REPOSITORY'] != ['twinsunllc', ['flutter', 'app', 'base'].join('-')].join('/')
+
+    gradle(task: 'clean assembleStagingRelease')
+    firebase_app_distribution(
+      app: '1:548746061485:android:71905375df6e53cd450824',
+      android_artifact_type: 'APK',
+      android_artifact_path: '../build/app/outputs/flutter-apk/app-staging-release.apk',
+      release_notes_file: '../CHANGELOG.md',
+      groups: 'internal'
+    )
+  end
+
+  lane :production_firebase do
+    raise 'Update your Fastfile to deploy to a different firebase app' if ENV['GITHUB_REPOSITORY'] != ['twinsunllc', ['flutter', 'app', 'base'].join('-')].join('/')
+
+    gradle(task: 'clean assembleProductionRelease')
+    firebase_app_distribution(
+      app: '1:548746061485:android:e4a8c5f8b9c6d2f3450824',
+      android_artifact_type: 'APK',
+      android_artifact_path: '../build/app/outputs/flutter-apk/app-production-release.apk',
+      release_notes_file: '../CHANGELOG.md',
+      groups: 'internal'
+    )
+  end
+
+  lane :staging do
+    gradle(task: 'clean bundleStagingRelease')
+    upload_to_play_store(
+      track: 'beta',
+      aab: '../build/app/outputs/bundle/stagingRelease/app-staging-release.aab',
+      package_name: 'dev.twinsun.flutterAppBase.staging'
+    )
+  end
+
+  lane :production do
+    gradle(task: 'clean bundleProductionRelease')
+    upload_to_play_store(
+      track: 'production',
+      aab: '../build/app/outputs/bundle/productionRelease/app-production-release.aab',
+      package_name: 'dev.twinsun.flutterAppBase'
+    )
+  end
+end

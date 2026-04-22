@@ -1,0 +1,204 @@
+#!/bin/bash
+# Accessibility Anti-Pattern Checker for Flutter
+# Checks for common accessibility issues that can be detected statically
+#
+# Usage: bin/accessibility_check [directory]
+# Default directory: lib/
+
+set -e
+
+DIR="${1:-lib}"
+ERRORS=0
+WARNINGS=0
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+echo "🔍 Checking accessibility anti-patterns in $DIR..."
+echo ""
+
+# Temporary file for tracking issues
+ISSUE_FILE=$(mktemp)
+trap "rm -f $ISSUE_FILE" EXIT
+
+# Function to check widget for required property within 15 lines
+check_widget_property() {
+  local widget="$1"
+  local required_props="$2"  # pipe-separated: "tooltip|semanticLabel"
+  local message="$3"
+  local severity="$4"  # error or warning
+  
+  local found_issues=false
+  
+  # Find all dart files with the widget
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    
+    # Use awk to find widget usages and check for required property within context
+    local issues
+    issues=$(awk -v widget="$widget" -v props="$required_props" '
+    BEGIN { in_widget = 0; widget_line = 0; widget_content = ""; paren_count = 0 }
+    {
+      # Look for widget opening
+      if ($0 ~ widget"\\(") {
+        in_widget = 1
+        widget_line = NR
+        widget_content = $0
+        # Count opening parens
+        gsub(/[^(]/, "", $0)
+        paren_count = length($0)
+        gsub(/[^)]/, "", widget_content)
+        paren_count -= length(widget_content)
+        widget_content = $0
+        next
+      }
+      
+      # If in widget, accumulate content
+      if (in_widget) {
+        widget_content = widget_content "\n" $0
+        temp = $0
+        gsub(/[^(]/, "", temp)
+        paren_count += length(temp)
+        temp = $0
+        gsub(/[^)]/, "", temp)
+        paren_count -= length(temp)
+        
+        # Widget closed or too many lines
+        if (paren_count <= 0 || NR - widget_line > 15) {
+          # Check if any required prop exists
+          split(props, prop_arr, "|")
+          found = 0
+          for (i in prop_arr) {
+            if (widget_content ~ prop_arr[i]) {
+              found = 1
+              break
+            }
+          }
+          if (!found) {
+            print widget_line
+          }
+          in_widget = 0
+          widget_content = ""
+          paren_count = 0
+        }
+      }
+    }
+    ' "$file" 2>/dev/null)
+    
+    if [ -n "$issues" ]; then
+      if [ "$found_issues" = false ]; then
+        if [ "$severity" = "error" ]; then
+          echo -e "${RED}❌ ERROR: $message${NC}"
+        else
+          echo -e "${YELLOW}⚠️  WARNING: $message${NC}"
+        fi
+        found_issues=true
+      fi
+      
+      for line_num in $issues; do
+        echo "   $file:$line_num"
+      done
+    fi
+  done < <(grep -rl "$widget(" "$DIR" --include="*.dart" 2>/dev/null || true)
+  
+  if [ "$found_issues" = true ]; then
+    echo ""
+    if [ "$severity" = "error" ]; then
+      ((ERRORS++))
+    else
+      ((WARNINGS++))
+    fi
+  fi
+}
+
+# Function to check for GestureDetector/InkWell without Semantics in same file
+check_gesture_without_semantics() {
+  local widget="$1"
+  local message="$2"
+  
+  local found_issues=false
+  
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    
+    # Check if Semantics is NOT in the same file
+    if ! grep -q "Semantics(" "$file" 2>/dev/null; then
+      if [ "$found_issues" = false ]; then
+        echo -e "${YELLOW}⚠️  WARNING: $message${NC}"
+        found_issues=true
+      fi
+      
+      # Show first occurrence
+      local line_num
+      line_num=$(grep -n "$widget(" "$file" 2>/dev/null | head -1 | cut -d: -f1)
+      echo "   $file:$line_num"
+    fi
+  done < <(grep -rl "$widget(" "$DIR" --include="*.dart" 2>/dev/null || true)
+  
+  if [ "$found_issues" = true ]; then
+    echo "   Consider wrapping with Semantics widget for accessibility"
+    echo ""
+    ((WARNINGS++))
+  fi
+}
+
+# =============================================================================
+# CHECKS
+# =============================================================================
+
+echo "Checking Image widgets..."
+check_widget_property "Image.asset" "semanticLabel|excludeFromSemantics" \
+  "Image.asset without semanticLabel or excludeFromSemantics" "warning"
+
+check_widget_property "Image.network" "semanticLabel|excludeFromSemantics" \
+  "Image.network without semanticLabel or excludeFromSemantics" "warning"
+
+check_widget_property "CachedNetworkImage" "semanticLabel|excludeFromSemantics" \
+  "CachedNetworkImage without semanticLabel" "warning"
+
+echo "Checking IconButton widgets..."
+check_widget_property "IconButton" "tooltip" \
+  "IconButton without tooltip (required for accessibility)" "error"
+
+echo "Checking GestureDetector widgets..."
+check_gesture_without_semantics "GestureDetector" \
+  "GestureDetector found without Semantics in file"
+
+echo "Checking InkWell widgets..."
+check_gesture_without_semantics "InkWell" \
+  "InkWell found without Semantics in file"
+
+echo "Checking TextField widgets..."
+check_widget_property "TextField" "labelText|label:" \
+  "TextField without labelText (screen readers need this)" "warning"
+
+check_widget_property "TextFormField" "labelText|label:" \
+  "TextFormField without labelText (screen readers need this)" "warning"
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
+  echo -e "${GREEN}✅ No accessibility anti-patterns found!${NC}"
+  echo ""
+  exit 0
+elif [ $ERRORS -eq 0 ]; then
+  echo -e "${YELLOW}⚠️  Found $WARNINGS warning(s), 0 errors${NC}"
+  echo ""
+  echo "Warnings are suggestions - review and fix if applicable."
+  echo "Run 'fvm flutter test test/accessibility/' for full accessibility testing."
+  exit 0
+else
+  echo -e "${RED}❌ Found $ERRORS error(s) and $WARNINGS warning(s)${NC}"
+  echo ""
+  echo "Errors must be fixed before merging."
+  echo "Run 'fvm flutter test test/accessibility/' for full accessibility testing."
+  exit 1
+fi

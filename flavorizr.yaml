@@ -1,0 +1,51 @@
+app:
+  android:
+    flavorDimensions: "flavor-type"
+  ios:
+    targets: ["Runner"]
+
+flavors:
+  production:
+    app:
+      name: "Flutter App Base"
+    android:
+      applicationId: "dev.twinsun.flutterAppBase"
+      generateDummyAssets: false
+    ios:
+      bundleId: "dev.twinsun.flutterAppBase"
+      generateDummyAssets: false
+    firebase:
+      android:
+        config: "android/app/src/production/google-services.json"
+      ios:
+        config: "ios/Runner/GoogleService-Info.plist"
+
+  staging:
+    app:
+      name: "Flutter App Base (Staging)"
+    android:
+      applicationId: "dev.twinsun.flutterAppBase.staging"
+      generateDummyAssets: false
+    ios:
+      bundleId: "dev.twinsun.flutterAppBase.staging"
+      generateDummyAssets: false
+    firebase:
+      android:
+        config: "android/app/src/staging/google-services.json"
+      ios:
+        config: "ios/Runner/GoogleService-Info-staging.plist"
+
+instructions:
+  - assets:download
+  - assets:extract
+  - android:androidManifest
+  - android:buildGradle
+  - android:dummyAssets
+  - ios:podfile
+  - ios:xcconfig
+  - ios:buildTargets
+  - ios:schema
+  - ios:dummyAssets
+  - ios:plist
+  - assets:clean
+  - ide:config

@@ -1,0 +1,44 @@
+name: Production Deployments
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - production
+
+jobs:
+  check_deploy:
+    uses: ./.github/workflows/_check_deploy.yml
+    secrets: inherit
+
+  test:
+    uses: ./.github/workflows/test.yml
+
+  production_ios:
+    uses: ./.github/workflows/ios.yml
+    needs: [test, check_deploy]
+    if: needs.check_deploy.outputs.ios == 'true'
+    secrets: inherit
+    with:
+      pilot_apple_id: ${{ vars.PILOT_APPLE_ID }}
+      flavor: production
+
+  production_android_firebase:
+    uses: ./.github/workflows/android.yml
+    needs: [test, check_deploy]
+    if: needs.check_deploy.outputs.android == 'true'
+    secrets: inherit
+    with:
+      flavor: production
+      platform: android_firebase
+      supply_package_name: dev.twinsun.flutter_app_base
+
+  production_android_store:
+    uses: ./.github/workflows/android.yml
+    needs: [test, check_deploy]
+    if: needs.check_deploy.outputs.android == 'true'
+    secrets: inherit
+    with:
+      flavor: production
+      platform: android
+      supply_package_name: dev.twinsun.flutter_app_base

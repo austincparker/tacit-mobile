@@ -1,0 +1,63 @@
+#!/usr/bin/env /bin/bash
+set -e
+set -x
+
+platform=${1:-android}
+environment=${2:-staging}
+buildnumber=$3
+buildname=$4
+command="flutter"
+flutterVersion=$(grep '"flutter"' .fvmrc | sed -E 's/.*"flutter": *"([^"]*)".*/\1/');
+
+echo "Building $platform / $environment"
+
+flutterplatform='ios';
+flutteropts='--release --no-codesign';
+mainfile='lib/main.dart'
+
+if command -v fvm; then
+    echo 'Using fvm';
+    command='fvm flutter';
+    [ -d $HOME/fvm/versions/$flutterVersion ] || /usr/bin/env /bin/bash -c "cd $HOME/fvm/versions; git clone -b $flutterVersion https://github.com/flutter/flutter $flutterVersion";
+    fvm list;
+    fvm use $flutterVersion;
+    fvm flutter doctor;
+fi
+
+if [ $platform == 'android' ]; then
+    flutterplatform='appbundle';
+    flutteropts='--release --target-platform android-arm,android-arm64,android-x64';
+elif [ $platform == 'android_firebase' ]; then
+    flutterplatform='apk';
+    flutteropts='--release';
+fi
+if [ $environment == 'production' ]; then
+    mainfile='lib/main_production.dart'
+elif [ $environment == 'staging' ]; then
+    mainfile='lib/main_staging.dart'
+fi
+if [ ! -z "$buildnumber" ]; then
+    flutteropts="$flutteropts --build-number $buildnumber";
+    export BUILD_NUMBER=$buildnumber
+fi
+if [ ! -z "$buildname" ]; then
+    flutteropts="$flutteropts --build-name $buildname";
+    export BUILD_NAME=$buildname;
+fi
+
+# Pre-activate flutterfire_cli to prevent build-time installation failures
+echo "Pre-activating flutterfire_cli..."
+$command pub global activate flutterfire_cli
+
+# Use flavor for build
+$command build $flutterplatform -t $mainfile $flutteropts --flavor $environment;
+
+if [ $platform == 'android_firebase' ]; then
+    cd android;
+    environment="${environment}_firebase";
+else
+    cd $platform;
+fi
+
+bundle install;
+bundle exec fastlane $environment;

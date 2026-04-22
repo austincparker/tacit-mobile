@@ -1,0 +1,47 @@
+name: Security Audit
+
+on:
+  workflow_call:
+
+jobs:
+  dependency_cooldown:
+    uses: ./.github/workflows/_dependency_cooldown.yml
+
+  osv_scanner:
+    name: OSV Scanner
+    runs-on: [runs-on,runner=2cpu-linux-x64,"run-id=${{ github.run_id }}"]
+    container:
+      image: alpine:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install OSV Scanner
+        run: apk add osv-scanner
+
+      - name: Run OSV Scanner
+        run: osv-scanner scan .
+
+  actions_security:
+    name: GitHub Actions Security Check
+    runs-on: [runs-on,runner=2cpu-linux-x64,"run-id=${{ github.run_id }}"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run GitHub Actions security audit
+        id: audit
+        uses: twinsunllc/github-actions-security-checker@965263a11209927fe078a206aee0aba3acc1ae58  # v1.4.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowlist: |
+            twinsunllc
+            dart-lang
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874  # v4.4.0
+        if: always()
+        with:
+          name: action-security-report
+          path: action-security-report.md
+          retention-days: 30

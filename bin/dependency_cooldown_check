@@ -1,0 +1,479 @@
+#!/usr/bin/env python3
+"""
+Dependency Cooldown Check
+
+Verifies that all dependencies (Dart/Flutter packages from pub.dev) have been
+published for at least N days, protecting against supply chain attacks.
+
+Automatically allows:
+- Minor/patch version updates (same major version) - no cooldown
+- Security fixes (updates that address known CVEs) - no cooldown
+
+Usage:
+    bin/dependency_cooldown_check [--days N] [--allowlist PACKAGES] [--include-transitive]
+                                  [--base-ref REF] [--no-security-bypass] [--no-minor-bypass]
+
+Options:
+    --days N               Cooldown period in days (default: 7, or COOLDOWN_DAYS env var)
+    --allowlist PACKAGES   Newline or comma-separated list of packages to skip
+    --include-transitive   Check all dependencies, not just direct ones (slower)
+    --base-ref REF         Git ref to compare against for detecting updates (default: origin/main)
+    --no-security-bypass   Don't automatically allow security fixes
+    --no-minor-bypass      Don't automatically allow minor/patch version updates
+"""
+
+import argparse
+import json
+import os
+import re
+import ssl
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+
+DEFAULT_COOLDOWN_DAYS = 7
+DEFAULT_BASE_REF = "origin/main"
+
+# Cache for security advisories
+_advisory_cache = {}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Check dependency cooldown periods")
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=int(os.environ.get("COOLDOWN_DAYS", DEFAULT_COOLDOWN_DAYS)),
+        help=f"Cooldown period in days (default: {DEFAULT_COOLDOWN_DAYS}, or COOLDOWN_DAYS env var)",
+    )
+    parser.add_argument(
+        "--allowlist",
+        default="",
+        help="Newline or comma-separated list of packages to skip checking",
+    )
+    parser.add_argument(
+        "--include-transitive",
+        action="store_true",
+        help="Check all dependencies including transitive ones (slower, more API calls)",
+    )
+    parser.add_argument(
+        "--base-ref",
+        default=os.environ.get("COOLDOWN_BASE_REF", DEFAULT_BASE_REF),
+        help=f"Git ref to compare against for detecting updates (default: {DEFAULT_BASE_REF})",
+    )
+    parser.add_argument(
+        "--no-security-bypass",
+        action="store_true",
+        help="Don't automatically allow updates that fix security vulnerabilities",
+    )
+    parser.add_argument(
+        "--no-minor-bypass",
+        action="store_true",
+        help="Don't automatically allow minor/patch version updates (only flag major version changes)",
+    )
+    return parser.parse_args()
+
+
+def parse_allowlist(allowlist_str):
+    """Parse allowlist string into a set of package names."""
+    if not allowlist_str or not allowlist_str.strip():
+        return set()
+
+    packages = set()
+    for item in re.split(r'[\n,]', allowlist_str):
+        item = item.strip().strip('"\'')
+        if item and not item.startswith('#'):
+            packages.add(item)
+    return packages
+
+
+def parse_semver(version):
+    """Parse a semantic version string into (major, minor, patch) tuple."""
+    # Match X.Y.Z pattern (may have additional parts like -beta.1 or +build)
+    match = re.match(r'^(\d+)\.(\d+)\.(\d+)', version)
+    if match:
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    return None
+
+
+def is_minor_or_patch_update(old_version, new_version):
+    """Check if new_version is a minor or patch update from old_version (same major version)."""
+    if not old_version or not new_version:
+        return False
+
+    old_semver = parse_semver(old_version)
+    new_semver = parse_semver(new_version)
+
+    if not old_semver or not new_semver:
+        return False
+
+    # Minor/patch update: same major version, any change in minor or patch
+    return (old_semver[0] == new_semver[0] and
+            (old_semver[1] != new_semver[1] or old_semver[2] != new_semver[2]))
+
+
+def get_file_from_git_ref(ref, filepath):
+    """Get file contents from a git ref."""
+    try:
+        result = subprocess.run(
+            ["git", "show", f"{ref}:{filepath}"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode == 0:
+            return result.stdout
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return None
+
+
+def parse_pubspec_lock_content(content):
+    """Parse pubspec.lock content and return package versions with dependency types."""
+    packages = {}
+    if not content:
+        return packages
+
+    current_package = None
+    current_data = {}
+
+    for line in content.split('\n'):
+        # Package name (top-level key under 'packages:')
+        if line.startswith('  ') and not line.startswith('    ') and line.strip().endswith(':'):
+            if current_package and current_data.get('version'):
+                packages[current_package] = current_data
+            current_package = line.strip().rstrip(':')
+            current_data = {}
+        # Package properties
+        elif line.startswith('    ') and current_package:
+            stripped = line.strip()
+            if stripped.startswith('dependency:'):
+                current_data['dependency'] = stripped.split(':', 1)[1].strip().strip('"')
+            elif stripped.startswith('version:'):
+                current_data['version'] = stripped.split(':', 1)[1].strip().strip('"')
+            elif stripped.startswith('source:'):
+                current_data['source'] = stripped.split(':', 1)[1].strip().strip('"')
+
+    # Don't forget the last package
+    if current_package and current_data.get('version'):
+        packages[current_package] = current_data
+
+    return packages
+
+
+def get_base_versions(base_ref):
+    """Get dependency versions from the base ref."""
+    base_packages = {}
+
+    # Try to get pubspec.lock from base ref
+    pubspec_lock_content = get_file_from_git_ref(base_ref, "pubspec.lock")
+    if pubspec_lock_content:
+        parsed = parse_pubspec_lock_content(pubspec_lock_content)
+        for name, data in parsed.items():
+            base_packages[name] = data.get('version')
+
+    return base_packages
+
+
+def fetch_json(url, headers=None):
+    """Fetch JSON from URL with error handling."""
+    try:
+        req = Request(url)
+        req.add_header("User-Agent", "dependency-cooldown-check")
+        if headers:
+            for key, value in headers.items():
+                req.add_header(key, value)
+
+        ctx = ssl.create_default_context()
+        with urlopen(req, context=ctx, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, json.JSONDecodeError):
+        return None
+
+
+def fetch_github_advisories(package_name):
+    """
+    Fetch security advisories from GitHub Advisory Database for pub.dev packages.
+
+    Returns list of CVE IDs that affect this package.
+    """
+    cache_key = f"pub:{package_name}"
+    if cache_key in _advisory_cache:
+        return _advisory_cache[cache_key]
+
+    headers = {"Accept": "application/vnd.github+json"}
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
+    # Query GitHub Advisory Database for pub ecosystem
+    encoded_name = quote(package_name, safe="")
+    url = f"https://api.github.com/advisories?ecosystem=pub&affects={encoded_name}&per_page=100"
+
+    data = fetch_json(url, headers)
+    advisories = []
+
+    if data and isinstance(data, list):
+        for advisory in data:
+            cve_id = advisory.get("cve_id")
+            if cve_id:
+                advisories.append({
+                    "cve_id": cve_id,
+                    "severity": advisory.get("severity", "unknown"),
+                    "summary": advisory.get("summary", ""),
+                    "vulnerabilities": advisory.get("vulnerabilities", [])
+                })
+
+    _advisory_cache[cache_key] = advisories
+    time.sleep(0.05)  # Light rate limiting for advisory queries
+    return advisories
+
+
+def check_if_security_update(package_name, old_version, new_version):
+    """
+    Check if updating from old_version to new_version fixes a security vulnerability.
+
+    Returns (is_security_fix, cve_ids) tuple.
+    """
+    if not old_version:
+        return False, []
+
+    advisories = fetch_github_advisories(package_name)
+    if not advisories:
+        return False, []
+
+    fixed_cves = []
+
+    for advisory in advisories:
+        for vuln in advisory.get("vulnerabilities", []):
+            if vuln.get("package", {}).get("name") != package_name:
+                continue
+
+            first_patched_data = vuln.get("first_patched_version")
+            first_patched = ""
+            if isinstance(first_patched_data, dict):
+                first_patched = first_patched_data.get("identifier", "")
+            elif isinstance(first_patched_data, str):
+                first_patched = first_patched_data
+
+            # Check if old_version is in vulnerable range and new_version is patched
+            old_semver = parse_semver(old_version)
+            new_semver = parse_semver(new_version)
+            patched_semver = parse_semver(first_patched) if first_patched else None
+
+            if old_semver and new_semver and patched_semver:
+                # If new version >= first patched version, and we're updating, it's likely a security fix
+                if new_semver >= patched_semver and old_semver < patched_semver:
+                    fixed_cves.append(advisory.get("cve_id"))
+
+    return len(fixed_cves) > 0, fixed_cves
+
+
+def parse_pubspec_lock(include_transitive=False):
+    """Parse pubspec.lock for exact versions."""
+    data = {"packages": {}, "direct_packages": set()}
+
+    with open("pubspec.lock", "r") as f:
+        content = f.read()
+
+    parsed = parse_pubspec_lock_content(content)
+
+    for name, pkg_data in parsed.items():
+        # Skip SDK dependencies (flutter, flutter_test, etc.)
+        if pkg_data.get('source') == 'sdk':
+            continue
+
+        version = pkg_data.get('version')
+        dependency = pkg_data.get('dependency', '')
+
+        if version:
+            data["packages"][name] = version
+
+            # Track direct dependencies
+            if dependency in ('direct main', 'direct dev'):
+                data["direct_packages"].add(name)
+
+    return data
+
+
+def fetch_pub_release_date(package_name, version):
+    """Get release date for a pub.dev package version."""
+    encoded_name = quote(package_name, safe="")
+    data = fetch_json(f"https://pub.dev/api/packages/{encoded_name}")
+    if not data or "versions" not in data:
+        return None
+
+    for v in data["versions"]:
+        if v.get("version") == version:
+            try:
+                # pub.dev uses ISO 8601 format
+                date_str = v.get("published")
+                if date_str:
+                    return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            except (KeyError, ValueError):
+                return None
+
+    return None
+
+
+class DependencyCooldownChecker:
+    def __init__(self, cooldown_days, allowlist, include_transitive=False,
+                 base_ref=DEFAULT_BASE_REF, security_bypass=True, minor_bypass=True):
+        self.cooldown_days = cooldown_days
+        self.allowlist = allowlist
+        self.include_transitive = include_transitive
+        self.base_ref = base_ref
+        self.security_bypass = security_bypass
+        self.minor_bypass = minor_bypass
+        self.violations = []
+        self.stats = {
+            "packages": {"checked": 0, "failed": 0, "allowed": 0, "minor_bypass": 0, "security_bypass": 0},
+        }
+        self.now = datetime.now(timezone.utc)
+        self.base_packages = {}
+
+    def run(self):
+        mode = "all dependencies" if self.include_transitive else "direct dependencies only"
+        print(f"Dependency Cooldown Check ({self.cooldown_days}-day minimum, {mode})")
+        print("=" * 70)
+
+        if self.allowlist:
+            print(f"Allowlist: {len(self.allowlist)} packages")
+
+        bypasses = []
+        if self.minor_bypass:
+            bypasses.append("minor/patch versions")
+        if self.security_bypass:
+            bypasses.append("security fixes")
+        if bypasses:
+            print(f"Auto-bypass: {', '.join(bypasses)}")
+
+        if self.include_transitive:
+            print("WARNING: Checking transitive dependencies - this may take a while")
+
+        # Load base versions for comparison
+        if self.minor_bypass or self.security_bypass:
+            print(f"Comparing against: {self.base_ref}")
+            self.base_packages = get_base_versions(self.base_ref)
+            if not self.base_packages:
+                print(f"  (Could not load base versions from {self.base_ref})")
+
+        print()
+
+        self.check_pub_packages()
+        self.report_results()
+
+        return 0 if not self.violations else 1
+
+    def check_pub_packages(self):
+        print("Checking pub.dev packages...")
+        lockfile_data = parse_pubspec_lock(self.include_transitive)
+
+        if self.include_transitive:
+            for name, version in lockfile_data["packages"].items():
+                self.check_package(name, version)
+        else:
+            for package_name in lockfile_data["direct_packages"]:
+                version = lockfile_data["packages"].get(package_name)
+                if not version:
+                    print(f"  [SKIP] {package_name} - version not found in pubspec.lock")
+                    continue
+                self.check_package(package_name, version)
+        print()
+
+    def check_package(self, name, version):
+        """Check a pub.dev package."""
+        self.stats["packages"]["checked"] += 1
+
+        # Check allowlist
+        if name in self.allowlist:
+            self.stats["packages"]["allowed"] += 1
+            print(f"  [ALLOW] {name} {version} (allowlisted)")
+            return
+
+        # Get base version for comparison
+        base_version = self.base_packages.get(name)
+
+        # If version is unchanged from base branch, skip cooldown check
+        if base_version and base_version == version:
+            print(f"  [OK] {name} {version} (unchanged from base)")
+            return
+
+        # Check for minor/patch version bypass (same major version)
+        if self.minor_bypass and base_version and is_minor_or_patch_update(base_version, version):
+            self.stats["packages"]["minor_bypass"] += 1
+            print(f"  [MINOR] {name} {base_version} -> {version} (minor/patch update, bypassed)")
+            return
+
+        # Check for security fix bypass
+        if self.security_bypass and base_version:
+            is_security, cves = check_if_security_update(name, base_version, version)
+            if is_security:
+                self.stats["packages"]["security_bypass"] += 1
+                cve_str = ", ".join(cves[:3])
+                if len(cves) > 3:
+                    cve_str += f" +{len(cves) - 3} more"
+                print(f"  [SECURITY] {name} {base_version} -> {version} (fixes {cve_str})")
+                return
+
+        # Standard cooldown check
+        release_date = fetch_pub_release_date(name, version)
+        if not release_date:
+            print(f"  [WARN] {name} {version} - could not fetch release date")
+            return
+
+        age_days = (self.now - release_date).days
+
+        if age_days < self.cooldown_days:
+            self.stats["packages"]["failed"] += 1
+            self.violations.append({"name": name, "version": version, "age_days": age_days})
+            print(f"  [FAIL] {name} {version} (released {age_days} days ago)")
+        else:
+            print(f"  [OK] {name} {version} (released {age_days} days ago)")
+
+        time.sleep(0.1)
+
+    def report_results(self):
+        print("=" * 70)
+        print("Summary:")
+        stats = self.stats["packages"]
+        parts = [f"{stats['checked']} checked", f"{stats['failed']} violations"]
+        if stats.get("allowed"):
+            parts.append(f"{stats['allowed']} allowlisted")
+        if stats.get("minor_bypass"):
+            parts.append(f"{stats['minor_bypass']} minor/patch bypasses")
+        if stats.get("security_bypass"):
+            parts.append(f"{stats['security_bypass']} security bypasses")
+        print(f"  pub.dev packages: {', '.join(parts)}")
+        print()
+
+        if not self.violations:
+            print(f"SUCCESS: All dependencies pass the {self.cooldown_days}-day cooldown check")
+        else:
+            print(f"FAILED: {len(self.violations)} dependencies are newer than {self.cooldown_days} days")
+            print()
+            print("Violations:")
+            for v in self.violations:
+                print(f"  - {v['name']} {v['version']} - released {v['age_days']} days ago")
+
+
+def main():
+    args = parse_args()
+    allowlist = parse_allowlist(args.allowlist)
+    checker = DependencyCooldownChecker(
+        args.days,
+        allowlist,
+        args.include_transitive,
+        args.base_ref,
+        security_bypass=not args.no_security_bypass,
+        minor_bypass=not args.no_minor_bypass,
+    )
+    sys.exit(checker.run())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,13 @@
+{
+  "_readme": "See PERMISSIONS.md for setup instructions and permission explanations",
+  "permissions": {
+    "allow": [
+      "Bash(fvm use:*)",
+      "Bash(fvm install:*)",
+      "Bash(fvm flutter clean:*)",
+      "Bash(fvm flutter pub get:*)",
+      "Bash(dart fix:*)",
+      "Bash(fvm flutter analyze:*)"
+    ]
+  }
+}

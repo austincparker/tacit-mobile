@@ -1,0 +1,19 @@
+name: Find Build Number
+outputs:
+  build_number:
+    description: The latest build number
+    value: ${{ steps.get_build_number.outputs.build_number }}
+runs:
+  using: composite
+  steps:
+    - id: get_build_number
+      name: Get build number
+      shell: bash
+      run: |
+        # Fetch all tags
+        git fetch --prune --unshallow --tags
+
+        # Find the latest build number
+        LATEST_BUILD_TAG=$(git tag -l "build-*" | sort -V | tail -n 1)
+        LATEST_BUILD_NUM=${LATEST_BUILD_TAG#build-}
+        echo "build_number=$LATEST_BUILD_NUM" >> "$GITHUB_OUTPUT"

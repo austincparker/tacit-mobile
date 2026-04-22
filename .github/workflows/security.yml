@@ -1,0 +1,11 @@
+name: Security Audit
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+
+jobs:
+  security:
+    uses: ./.github/workflows/_security.yml

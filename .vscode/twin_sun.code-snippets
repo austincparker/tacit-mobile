@@ -1,0 +1,28 @@
+{
+	"Generate a Screen": {
+		"scope": "dart",
+		"prefix": "screen",
+		"body": [
+			"import 'package:flutter/material.dart';",
+			"import 'package:flutter_app_base/screens/base_screen.dart';",
+			"",
+			"class ${1:ScreenName} extends BaseScreen {",
+			"  const ${1:ScreenName}({super.key});",
+			"",
+			"  @override",
+			"  State<${1:ScreenName}> createState() => _${1:ScreenName}State();",
+			"}",
+			"",
+			"class _${1:ScreenName}State extends BaseScreenState<${1:ScreenName}> {",
+			"  @override",
+			"  Widget build(BuildContext context, [_]) {",
+			"    return super.build(",
+			"      context,",
+			"      ${2:const Placeholder()},",
+			"    );",
+			"  }",
+			"}"
+		],
+		"description": "Base Screen with defaults and Scaffold wrapper"
+	}
+}

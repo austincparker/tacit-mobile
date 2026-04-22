@@ -1,0 +1,15 @@
+{
+  "dart.flutterSdkPath": ".fvm/flutter_sdk",
+  "search.exclude": {
+    "**/.fvm": true
+  },
+  "files.watcherExclude": {
+    "**/.fvm": true
+  },
+  "dart.lineLength": 150,
+  "[dart]": {
+    "editor.rulers": [
+      150
+    ]
+  }
+}

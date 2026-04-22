@@ -1,0 +1,43 @@
+name: Check Deploy Configuration
+
+on:
+  workflow_call:
+    outputs:
+      ios:
+        description: "Whether iOS deploy secrets are configured"
+        value: ${{ jobs.check.outputs.ios }}
+      android:
+        description: "Whether Android deploy secrets are configured"
+        value: ${{ jobs.check.outputs.android }}
+
+jobs:
+  check:
+    name: Detect Configured Platforms
+    runs-on: ubuntu-latest
+    outputs:
+      ios: ${{ steps.detect.outputs.ios }}
+      android: ${{ steps.detect.outputs.android }}
+    steps:
+      - name: Detect configured platforms
+        id: detect
+        # MATCH_PASSWORD gates iOS (Fastlane Match signing workflow).
+        # ANDROID_KEYSTORE gates Android (base64-encoded JKS keystore).
+        # Detection is presence-only — a misconfigured (non-empty but invalid)
+        # secret will pass this gate and fail further downstream in the deploy job.
+        # If your project uses a different signing approach, update these checks.
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          if [ -n "$MATCH_PASSWORD" ]; then
+            echo "ios=true" >> $GITHUB_OUTPUT
+          else
+            echo "::notice::iOS deploy skipped — signing secrets not configured. See setup.dart for setup instructions."
+            echo "ios=false" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "$ANDROID_KEYSTORE" ]; then
+            echo "android=true" >> $GITHUB_OUTPUT
+          else
+            echo "::notice::Android deploy skipped — signing secrets not configured. See setup.dart for setup instructions."
+            echo "android=false" >> $GITHUB_OUTPUT
+          fi
