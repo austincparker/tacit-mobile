@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:flutter_app_base/firebase_options.dart';
 import 'package:logging/logging.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -44,10 +42,6 @@ class LoggingBloc {
       if (rec.stackTrace != null) pieces.add(rec.stackTrace.toString());
 
       _logs.add(pieces.join('\n'));
-
-      if (DefaultFirebaseOptions.isConfigured) {
-        FirebaseCrashlytics.instance.log(pieces.join('\n'));
-      }
 
       print(pieces.join('\n')); // ignore: avoid_print
     });

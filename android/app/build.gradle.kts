@@ -36,7 +36,7 @@ fun buildVersionCode(): Int {
 }
 
 android {
-    namespace = "dev.twinsun.flutter_app_base"
+    namespace = "dev.twinsun.tacit_mobile"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = System.getenv("ANDROID_NDK_VERSION") ?: "27.0.12077973"
 
@@ -52,7 +52,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "dev.twinsun.flutter_app_base"
+        applicationId = "dev.twinsun.tacit_mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -67,14 +67,14 @@ android {
     productFlavors {
         create("production") {
             dimension = "flavor-type"
-            applicationId = "dev.twinsun.flutterAppBase"
-            resValue("string", "app_name", "Flutter App Base")
+            applicationId = "dev.twinsun.tacitMobile"
+            resValue("string", "app_name", "Tacit Mobile")
         }
         
         create("staging") {
             dimension = "flavor-type"
-            applicationId = "dev.twinsun.flutterAppBase.staging"
-            resValue("string", "app_name", "Flutter App Base (Staging)")
+            applicationId = "dev.twinsun.tacitMobile.staging"
+            resValue("string", "app_name", "Tacit Mobile (Staging)")
         }
     }
 

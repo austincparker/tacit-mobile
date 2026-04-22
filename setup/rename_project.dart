@@ -60,13 +60,13 @@ void main(List<String> arguments) {
           if (entity.path.endsWith('android/fastlane/Fastfile')) {
             content = content.replaceAll(RegExp(r'^\s*raise.*$', multiLine: true), '');
           }
-          content = content.replaceAll('Flutter App Base (Staging)', '$newAppSpaced (Staging)');
-          content = content.replaceAll('Flutter App Base', newAppSpaced);
-          content = content.replaceAll('Flutter app base', newAppSentence);
-          content = content.replaceAll('flutter_app_base', newAppSnake);
-          content = content.replaceAll('FlutterAppBase', newAppPascal);
-          content = content.replaceAll('flutterAppBase', newAppCamel);
-          content = content.replaceAll('flutter-app-base', newAppKebab);
+          content = content.replaceAll('Tacit Mobile (Staging)', '$newAppSpaced (Staging)');
+          content = content.replaceAll('Tacit Mobile', newAppSpaced);
+          content = content.replaceAll('Tacit mobile', newAppSentence);
+          content = content.replaceAll('tacit_mobile', newAppSnake);
+          content = content.replaceAll('TacitMobile', newAppPascal);
+          content = content.replaceAll('tacitMobile', newAppCamel);
+          content = content.replaceAll('tacit-mobile', newAppKebab);
 
           entity.writeAsStringSync(content);
         } catch (e) {

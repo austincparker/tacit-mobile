@@ -1,5 +1,5 @@
-name: flutter_app_base
-description: A new Flutter project.
+name: tacit_mobile
+description: TACIT Mobile — Flutter client for the TACIT AI pipeline.
 publish_to: "none"
 version: 1.0.0+1
 
@@ -8,29 +8,20 @@ environment:
   flutter: ">=3.41.6"
 
 dependencies:
-  cached_network_image: ^3.4.1
   connectivity_plus: ^6.1.0
-  crypto: ^3.0.7
   cupertino_icons: ^1.0.8
   device_info_plus: ^11.1.1
-  firebase_analytics: ^12.1.0
-  firebase_core: ^4.4.0
-  firebase_crashlytics: ^5.0.6
-  firebase_messaging: ^16.1.1
   flutter:
     sdk: flutter
-  flutter_local_notifications: ^20.0.0
+  flutter_markdown: ^0.7.5
+  flutter_secure_storage: ^9.2.2
   http: ^1.2.2
-  image_picker: ^1.2.1
   logging: ^1.3.0
   package_info_plus: ^8.1.1
   rxdart: ^0.28.0
   shared_preferences: ^2.3.3
 
 dev_dependencies:
-  faker: ^2.2.0
-  firebase_core_platform_interface: ^6.0.0
-  flutter_flavorizr: 2.4.1
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter

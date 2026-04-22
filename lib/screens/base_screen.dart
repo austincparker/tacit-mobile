@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app_base/mixins/navigation.dart';
-import 'package:flutter_app_base/mixins/snack_bars.dart';
-import 'package:flutter_app_base/widgets/app_bars/default_app_bar.dart';
-import 'package:flutter_app_base/widgets/loading_spinner.dart';
+import 'package:tacit_mobile/mixins/navigation.dart';
+import 'package:tacit_mobile/mixins/snack_bars.dart';
+import 'package:tacit_mobile/widgets/app_bars/default_app_bar.dart';
+import 'package:tacit_mobile/widgets/loading_spinner.dart';
 
 abstract class BaseScreen extends StatefulWidget {
   final String title;

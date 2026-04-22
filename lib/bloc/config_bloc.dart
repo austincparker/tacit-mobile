@@ -1,5 +1,6 @@
-import 'package:flutter_app_base/mixins/logger.dart';
-import 'package:flutter_app_base/repository/config_repository.dart';
+import 'package:tacit_mobile/mixins/logger.dart';
+import 'package:tacit_mobile/repository/config_repository.dart';
+import 'package:tacit_mobile/repository/secure_config_repository.dart';
 import 'package:rxdart/rxdart.dart';
 
 class ConfigBloc with Logger {
@@ -9,28 +10,31 @@ class ConfigBloc with Logger {
     return _instance ??= ConfigBloc._();
   }
 
-  static Future<ConfigBloc> reset({ConfigRepository? repository}) async {
+  static Future<ConfigBloc> reset({
+    ConfigRepository? repository,
+    SecureConfigRepository? secureRepository,
+  }) async {
     await _instance?._dispose();
-    return _instance = ConfigBloc._(repository);
+    return _instance = ConfigBloc._(repository, secureRepository);
   }
 
   final ConfigRepository _repository;
+  final SecureConfigRepository _secureRepository;
 
-  final Map<String, BehaviorSubject> _streams = {};
+  final Map<String, BehaviorSubject<String>> _streams = {};
 
-  ConfigBloc._([ConfigRepository? repository])
-      : _repository = repository ?? ConfigRepository();
+  ConfigBloc._([ConfigRepository? repository, SecureConfigRepository? secureRepository])
+      : _repository = repository ?? ConfigRepository(),
+        _secureRepository = secureRepository ?? SecureConfigRepository();
 
   Future<void> initialize() async {
     log.finest('initialize()');
-    final authEmail = await stringValueFor(kAuthEmail);
-    _streams[kAuthEmail] = BehaviorSubject<String>.seeded(authEmail ?? '');
 
-    final authToken = await stringValueFor(kAuthToken);
-    _streams[kAuthToken] = BehaviorSubject<String>.seeded(authToken ?? '');
+    final serverUrl = await _repository.getValueForKey(kServerUrl);
+    _streams[kServerUrl] = BehaviorSubject<String>.seeded(serverUrl ?? '');
 
-    final authId = await stringValueFor(kAuthId);
-    _streams[kAuthId] = BehaviorSubject<String>.seeded(authId ?? '');
+    final apiKey = await _secureRepository.getValueForKey(kApiKey);
+    _streams[kApiKey] = BehaviorSubject<String>.seeded(apiKey ?? '');
   }
 
   Future<void> _dispose() async {
@@ -39,60 +43,40 @@ class ConfigBloc with Logger {
     _streams.clear();
   }
 
-  Stream streamFor(String key) {
+  Stream<String> streamFor(String key) {
     if (!_streams.containsKey(key)) {
       throw 'Unknown configuration key: $key';
     }
     return _streams[key]!.stream;
   }
 
-  Future<double?> doubleValueFor(String key) async {
-    final value = await _repository.getValueForKey(key);
-    log.finest('doubleValueFor $key -> $value');
-    if (value != null) {
-      return double.tryParse(value);
-    }
-    return null;
-  }
+  Stream<bool> get isConfigured => Rx.combineLatest2(
+        streamFor(kServerUrl),
+        streamFor(kApiKey),
+        (String url, String key) => url.isNotEmpty && key.isNotEmpty,
+      );
 
-  Future<String?> stringValueFor(String key) async {
-    final value = await _repository.getValueForKey(key);
-    log.finest('stringValueFor $key -> $value');
-    return value;
-  }
-
-  Future<void> addToStream(String key, dynamic value) async {
-    log.finest('addToStream $key -> $value');
-    if (!_streams.containsKey(key)) {
-      throw 'Unknown configuration key: $key';
-    }
-    await _repository.setValueForKey(key, value.toString());
-    _streams[key]!.add(value);
-  }
-
-  Future<void> setAuthCredentials({
-    required String email,
-    required String token,
-    required String userId,
+  Future<void> setServerConfig({
+    required String serverUrl,
+    required String apiKey,
   }) async {
-    log.finest('setAuthCredentials($email)');
-    await Future.wait([
-      addToStream(kAuthEmail, email),
-      addToStream(kAuthToken, token),
-      addToStream(kAuthId, userId),
-    ]);
+    log.finest('setServerConfig($serverUrl)');
+    await _repository.setValueForKey(kServerUrl, serverUrl);
+    _streams[kServerUrl]!.add(serverUrl);
+
+    await _secureRepository.setValueForKey(kApiKey, apiKey);
+    _streams[kApiKey]!.add(apiKey);
   }
 
-  Future<void> clearAuthCredentials() async {
-    log.finest('clearAuthCredentials()');
-    await Future.wait([
-      addToStream(kAuthEmail, ''),
-      addToStream(kAuthToken, ''),
-      addToStream(kAuthId, ''),
-    ]);
+  Future<void> clearServerConfig() async {
+    log.finest('clearServerConfig()');
+    await _repository.setValueForKey(kServerUrl, '');
+    _streams[kServerUrl]!.add('');
+
+    await _secureRepository.deleteValueForKey(kApiKey);
+    _streams[kApiKey]!.add('');
   }
 
-  static const kAuthToken = 'kAuthToken';
-  static const kAuthEmail = 'kAuthEmail';
-  static const kAuthId = 'kAuthId';
+  static const kServerUrl = 'kServerUrl';
+  static const kApiKey = 'kApiKey';
 }

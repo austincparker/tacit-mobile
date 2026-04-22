@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_app_base/bloc/auth_bloc.dart';
-import 'package:flutter_app_base/screens/base_screen.dart';
-import 'package:flutter_app_base/screens/login_screen.dart';
-import 'package:flutter_app_base/screens/main_screen.dart';
+import 'package:tacit_mobile/bloc/config_bloc.dart';
+import 'package:tacit_mobile/screens/base_screen.dart';
+import 'package:tacit_mobile/screens/home_screen.dart';
+import 'package:tacit_mobile/screens/server_setup_screen.dart';
 
 class SplashScreen extends BaseScreen {
   const SplashScreen({super.key});
@@ -12,21 +14,28 @@ class SplashScreen extends BaseScreen {
 }
 
 class _SplashScreenState extends BaseScreenState<SplashScreen> {
+  late final StreamSubscription<bool> _configSubscription;
+
   @override
   void initState() {
     super.initState();
 
-    AuthBloc().fetchCurrentUser().then((user) {
-      Future.delayed(
-        const Duration(seconds: 2),
-        () => popAllAndPush(const MainScreen()),
-      );
-    }).catchError((error) {
-      Future.delayed(
-        const Duration(seconds: 2),
-        () => popAllAndPush(const LoginScreen()),
-      );
+    _configSubscription = ConfigBloc().isConfigured.listen((configured) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        if (configured) {
+          popAllAndPush(const HomeScreen());
+        } else {
+          popAllAndPush(const ServerSetupScreen());
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _configSubscription.cancel();
+    super.dispose();
   }
 
   @override
@@ -35,9 +44,16 @@ class _SplashScreenState extends BaseScreenState<SplashScreen> {
     return Scaffold(
       body: Center(
         child: Semantics(
-          label: 'Loading application',
+          label: 'Loading TACIT Mobile',
           liveRegion: true,
-          child: const Text('Splash Screen'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.psychology, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              const Text('TACIT Mobile'),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,5 @@
 #include "Generated.xcconfig"
 
-PRODUCT_BUNDLE_IDENTIFIER = dev.twinsun.flutterAppBase.staging
-PRODUCT_NAME = Flutter App Base (Staging)
-BUNDLE_DISPLAY_NAME = Flutter App Base (Staging)
+PRODUCT_BUNDLE_IDENTIFIER = dev.twinsun.tacitMobile.staging
+PRODUCT_NAME = Tacit Mobile (Staging)
+BUNDLE_DISPLAY_NAME = Tacit Mobile (Staging)

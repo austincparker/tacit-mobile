@@ -1,91 +1,93 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_app_base/bloc/auth_bloc.dart';
-import 'package:flutter_app_base/model/api_response.dart';
-import 'package:flutter_app_base/model/user.dart';
-import 'package:flutter_app_base/screens/base_screen.dart';
-import 'package:flutter_app_base/screens/change_password_screen.dart';
-import 'package:flutter_app_base/screens/edit_profile_screen.dart';
-import 'package:flutter_app_base/screens/login_screen.dart';
+import 'package:tacit_mobile/api/status_api.dart';
+import 'package:tacit_mobile/api/tacit_api.dart';
+import 'package:tacit_mobile/bloc/config_bloc.dart';
+import 'package:tacit_mobile/model/tacit_status.dart';
+import 'package:tacit_mobile/screens/base_screen.dart';
+import 'package:tacit_mobile/screens/server_setup_screen.dart';
 
 class SettingsScreen extends BaseScreen {
-  const SettingsScreen({
-    super.key,
-    super.title = 'Settings',
-  });
+  const SettingsScreen({super.key, super.title = 'Settings'});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends BaseScreenState<SettingsScreen> {
-  late final StreamSubscription<User?> _currentUserSubscription;
-  User? _currentUser;
+  TacitStatus? _status;
+  List<Map<String, dynamic>>? _experts;
+  List<String>? _models;
+  String? _serverUrl;
+  String? _error;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _currentUser = AuthBloc().currentUser;
-    _currentUserSubscription = AuthBloc().currentUserStream.listen((user) {
-      if (user == null) {
-        // User logged out or deleted, navigate to login
-        popAllAndPush(const LoginScreen());
-        return;
-      }
-      setState(() {
-        _currentUser = user;
-      });
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    setState(() {
+      _loading = true;
+      _error = null;
     });
+
+    _serverUrl = await ConfigBloc().streamFor(ConfigBloc.kServerUrl).first;
+
+    try {
+      final results = await Future.wait([
+        StatusApi().checkStatus(),
+        StatusApi().listExperts(),
+        StatusApi().listModels(),
+      ]);
+
+      setState(() {
+        _status = results[0] as TacitStatus;
+        _experts = results[1] as List<Map<String, dynamic>>;
+        _models = results[2] as List<String>;
+        _loading = false;
+      });
+    } on UnauthorizedException {
+      setState(() {
+        _error = 'Invalid API key';
+        _loading = false;
+      });
+    } on ServerUnreachableException catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
   }
 
-  @override
-  void dispose() {
-    _currentUserSubscription.cancel();
-    super.dispose();
-  }
-
-  Future<void> _onLogout() async {
-    await AuthBloc().logout();
-  }
-
-  Future<void> _onDeleteAccount() async {
+  Future<void> _disconnect() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone.',
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Disconnect from TACIT?'),
+        content: const Text('This will clear the server URL and API key.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Disconnect', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
-    if (confirmed != true) return;
-
-    try {
-      await AuthBloc().deleteAccount();
-    } on ApiResponse catch (response) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Semantics(
-            liveRegion: true,
-            child: Text(response.error?.message ?? 'Failed to delete account'),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (confirmed == true) {
+      await ConfigBloc().clearServerConfig();
+      if (mounted) popAllAndPush(const ServerSetupScreen());
     }
   }
 
@@ -93,77 +95,78 @@ class _SettingsScreenState extends BaseScreenState<SettingsScreen> {
   Widget build(BuildContext context, [_]) {
     return super.build(
       context,
-      ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Account Section
-          Semantics(
-            header: true,
-            child: const Text(
-              'Account',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+      _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              children: [
+                _sectionHeader('Connection'),
+                ListTile(
+                  leading: Icon(
+                    _status?.isHealthy == true ? Icons.check_circle : Icons.error,
+                    color: _status?.isHealthy == true ? Colors.green : Colors.red,
+                  ),
+                  title: Text(_serverUrl ?? 'Not configured'),
+                  subtitle: _status != null
+                      ? Text(_status!.summary)
+                      : _error != null
+                          ? Text(_error!, style: const TextStyle(color: Colors.red))
+                          : null,
+                ),
+                const Divider(),
+                if (_experts != null) ...[
+                  _sectionHeader('Experts (${_experts!.length})'),
+                  for (final expert in _experts!)
+                    ListTile(
+                      dense: true,
+                      title: Text(expert['name']?.toString() ?? ''),
+                      trailing: Text(
+                        expert['scope']?.toString() ?? '',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ),
+                  const Divider(),
+                ],
+                if (_models != null) ...[
+                  _sectionHeader('Models (${_models!.length})'),
+                  for (final model in _models!)
+                    ListTile(dense: true, title: Text(model)),
+                  const Divider(),
+                ],
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OutlinedButton.icon(
+                    onPressed: () => pushScreen(const ServerSetupScreen()),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Reconfigure'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OutlinedButton.icon(
+                    onPressed: _disconnect,
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    label: const Text(
+                      'Disconnect',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            leading: const Icon(Icons.email),
-            title: const Text('Email'),
-            subtitle: Text(_currentUser?.email ?? ''),
-          ),
-          if (_currentUser?.subscribed ?? false)
-            ListTile(
-              leading: const Icon(Icons.star),
-              title: const Text('Subscription'),
-              subtitle: Text(
-                _currentUser?.subscribedUntil != null
-                    ? 'Active until ${_currentUser!.subscribedUntil!.toLocal().toString().split(' ')[0]}'
-                    : 'Active',
-              ),
-            ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Edit Profile'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => pushScreen(const EditProfileScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.lock),
-            title: const Text('Change Password'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => pushScreen(const ChangePasswordScreen()),
-          ),
-          const Divider(),
+    );
+  }
 
-          // Actions Section
-          const SizedBox(height: 16),
-          Semantics(
-            header: true,
-            child: const Text(
-              'Actions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
             ),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Log Out'),
-            onTap: _onLogout,
-          ),
-          ListTile(
-            leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: const Text(
-              'Delete Account',
-              style: TextStyle(color: Colors.red),
-            ),
-            onTap: _onDeleteAccount,
-          ),
-        ],
       ),
     );
   }

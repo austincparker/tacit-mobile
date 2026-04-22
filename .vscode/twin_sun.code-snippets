@@ -4,7 +4,7 @@
 		"prefix": "screen",
 		"body": [
 			"import 'package:flutter/material.dart';",
-			"import 'package:flutter_app_base/screens/base_screen.dart';",
+			"import 'package:tacit_mobile/screens/base_screen.dart';",
 			"",
 			"class ${1:ScreenName} extends BaseScreen {",
 			"  const ${1:ScreenName}({super.key});",

@@ -20,7 +20,7 @@ String _promptForInput(String prompt, String? defaultValue) {
 
 void _printUsage() {
   // ignore: avoid_print
-  print('Flutter App Base Setup');
+  print('Tacit Mobile Setup');
   // ignore: avoid_print
   print('======================');
   // ignore: avoid_print
@@ -118,7 +118,7 @@ void main(List<String> arguments) async {
   }
 
   // ignore: avoid_print
-  print('Flutter App Base Setup');
+  print('Tacit Mobile Setup');
   // ignore: avoid_print
   print('======================');
   // ignore: avoid_print

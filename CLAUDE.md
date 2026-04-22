@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Flutter app base template designed for rapid development of Flutter applications. It includes:
+This is a Tacit mobile template designed for rapid development of Flutter applications. It includes:
 - Firebase integration (Analytics, Crashlytics, Messaging)
 - Authentication system with token-based auth
 - BLoC pattern for state management
@@ -83,7 +83,7 @@ fvm flutter clean && fvm flutter pub get
 ./setup.dart
 
 # This will:
-# - Rename project from flutter_app_base to your app name
+# - Rename project from tacit_mobile to your app name
 # - Set up Firebase project with 4 apps (production & staging for iOS & Android)
 # - Download configuration files to correct locations
 # - Enable required Firebase services

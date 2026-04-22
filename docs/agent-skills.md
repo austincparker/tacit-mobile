@@ -1,6 +1,6 @@
 # Agent Skills
 
-This Flutter app base includes Agent Skills for AI-assisted development. Skills follow the [Agent Skills open standard](https://agentskills.io/specification) and are stored in `.claude/skills/`.
+This Tacit mobile includes Agent Skills for AI-assisted development. Skills follow the [Agent Skills open standard](https://agentskills.io/specification) and are stored in `.claude/skills/`.
 
 ## Available Skills
 
@@ -31,17 +31,17 @@ Skills live in `.claude/skills/` and are version-controlled with the project. Al
 
 ## Updating Skills
 
-When skills are updated in the Flutter app base, pull the latest changes:
+When skills are updated in the Tacit mobile, pull the latest changes:
 
 ```bash
-cd /path/to/flutter-app-base
+cd /path/to/tacit-mobile
 git pull
 ```
 
 Projects created from this template inherit the skills at creation time. To update skills in an existing project, copy from the latest template:
 
 ```bash
-cp -r /path/to/flutter-app-base/.claude/skills/twinsun-* /path/to/your-project/.claude/skills/
+cp -r /path/to/tacit-mobile/.claude/skills/twinsun-* /path/to/your-project/.claude/skills/
 ```
 
 ## Resources

@@ -7,12 +7,12 @@ app:
 flavors:
   production:
     app:
-      name: "Flutter App Base"
+      name: "Tacit Mobile"
     android:
-      applicationId: "dev.twinsun.flutterAppBase"
+      applicationId: "dev.twinsun.tacitMobile"
       generateDummyAssets: false
     ios:
-      bundleId: "dev.twinsun.flutterAppBase"
+      bundleId: "dev.twinsun.tacitMobile"
       generateDummyAssets: false
     firebase:
       android:
@@ -22,12 +22,12 @@ flavors:
 
   staging:
     app:
-      name: "Flutter App Base (Staging)"
+      name: "Tacit Mobile (Staging)"
     android:
-      applicationId: "dev.twinsun.flutterAppBase.staging"
+      applicationId: "dev.twinsun.tacitMobile.staging"
       generateDummyAssets: false
     ios:
-      bundleId: "dev.twinsun.flutterAppBase.staging"
+      bundleId: "dev.twinsun.tacitMobile.staging"
       generateDummyAssets: false
     firebase:
       android:

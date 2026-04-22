@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter_app_base/bloc/logging_bloc.dart';
+import 'package:tacit_mobile/bloc/logging_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 

@@ -1,4 +1,4 @@
-# Flutter App Base
+# Tacit Mobile
 
 A production-ready Flutter template that gives your project Firebase, authentication, CI/CD pipelines, accessibility testing, and deployment automation out of the box -- so you can skip the boilerplate and start building features on day one.
 
@@ -45,7 +45,7 @@ See the **Developer Toolkit** page in the Twin Sun Confluence space for full doc
 
 ```bash
 # 1. Clone and rename
-git clone git@github.com:twinsunllc/flutter-app-base.git my-awesome-app
+git clone git@github.com:twinsunllc/tacit-mobile.git my-awesome-app
 cd my-awesome-app
 git remote set-url origin git@github.com:twinsunllc/my-awesome-app.git
 git push -u origin main

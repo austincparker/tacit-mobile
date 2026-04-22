@@ -1,20 +1,20 @@
 enum Flavor {
   production(
-    title: 'Flutter App Base',
-    apiUrl: 'https://api.example.com',
+    title: 'TACIT Mobile',
+    tacitUrl: 'http://192.168.1.137:8642',
   ),
   staging(
-    title: 'Flutter App Base (Staging)',
-    apiUrl: 'https://staging-api.example.com',
+    title: 'TACIT Mobile (Dev)',
+    tacitUrl: 'http://localhost:8642',
   );
 
   const Flavor({
     required this.title,
-    required this.apiUrl,
+    required this.tacitUrl,
   });
 
   final String title;
-  final String apiUrl;
+  final String tacitUrl;
 }
 
 class F {
@@ -22,5 +22,5 @@ class F {
 
   static String get name => appFlavor.name;
   static String get title => appFlavor.title;
-  static String get apiUrl => appFlavor.apiUrl;
+  static String get tacitUrl => appFlavor.tacitUrl;
 }
