@@ -1,12 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:tacit_mobile/bloc/logging_bloc.dart';
 import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:tacit_mobile/bloc/logging_bloc.dart';
 
 final class AppHttpClient implements http.Client {
   static final AppHttpClient _instance = AppHttpClient._internal();
@@ -18,56 +15,13 @@ final class AppHttpClient implements http.Client {
 
   final http.Client _client = http.Client();
 
-  PackageInfo? _packageInfo;
-  Map<String, String> _clientHeaders = {};
-
-  String get buildNumber {
-    final info = _packageInfo;
-    if (info == null) return '0';
-
-    final asNumber = int.tryParse(info.buildNumber);
-    if (asNumber == null) return info.buildNumber;
-
-    return '${asNumber % 10000}';
-  }
-
   static Future<void> initialize() async {
     if (_initialized) return;
-    await _instance._loadClientHeaders();
     _initialized = true;
-  }
-
-  Future<void> _loadClientHeaders() async {
-    _packageInfo = await PackageInfo.fromPlatform();
-    final deviceInfo = DeviceInfoPlugin();
-
-    _clientHeaders = {
-      'X-App-Version': _packageInfo?.version ?? 'unknown',
-      'X-App-Build': buildNumber,
-    };
-
-    if (Platform.isAndroid) {
-      final androidInfo = await deviceInfo.androidInfo;
-      _clientHeaders.addAll({
-        'X-Device-OS': 'Android',
-        'X-Device-OS-Version': androidInfo.version.release,
-        'X-Device-Model': androidInfo.model,
-      });
-    }
-
-    if (Platform.isIOS) {
-      final iosInfo = await deviceInfo.iosInfo;
-      _clientHeaders.addAll({
-        'X-Device-OS': 'iOS',
-        'X-Device-OS-Version': iosInfo.systemVersion,
-        'X-Device-Model': iosInfo.utsname.machine,
-      });
-    }
   }
 
   Map<String, String> baseHeaders(Map<String, String>? headers) {
     return {
-      ..._clientHeaders,
       ...(headers ?? {}),
     };
   }

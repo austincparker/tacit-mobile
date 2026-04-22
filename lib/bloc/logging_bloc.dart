@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logging/logging.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -19,20 +18,17 @@ class LoggingBloc {
   final List<String> _logs = [];
   List<String> get logs => _logs;
 
-  final BehaviorSubject<bool> _connectedSubject = BehaviorSubject<bool>();
-
+  final BehaviorSubject<bool> _connectedSubject = BehaviorSubject<bool>.seeded(true);
   Stream<bool> get connected => _connectedSubject.stream;
 
   StreamSubscription? _logRecordSubscription;
-  StreamSubscription? _connectivitySubscription;
 
   LoggingBloc._() {
     Logger.root.level = Level.ALL;
   }
 
-  Future initialize() async {
+  Future<void> initialize() async {
     _logRecordSubscription?.cancel();
-    _connectivitySubscription?.cancel();
 
     _logRecordSubscription = Logger.root.onRecord.listen((LogRecord rec) {
       final pieces = [
@@ -45,11 +41,6 @@ class LoggingBloc {
 
       print(pieces.join('\n')); // ignore: avoid_print
     });
-
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(_logConnectivity);
-    _logConnectivity(await Connectivity().checkConnectivity());
-
-    return Future.value();
   }
 
   void logNetworkRequest({
@@ -67,27 +58,14 @@ class LoggingBloc {
     print(message);
   }
 
-  void _logConnectivity(List<ConnectivityResult> results) {
-    for (final result in results) {
-      switch (result) {
-        case ConnectivityResult.mobile:
-          Logger.root.info('Network Connectivity: mobile');
-          _connectedSubject.add(true);
-        case ConnectivityResult.wifi:
-          Logger.root.info('Network Connectivity: wifi');
-          _connectedSubject.add(true);
-        case ConnectivityResult.none:
-        default:
-          Logger.root.info('Network Connectivity: none');
-          _connectedSubject.add(false);
-      }
-    }
+  /// Update connectivity state from network errors.
+  void setConnected(bool connected) {
+    _connectedSubject.add(connected);
   }
 
   Future<void> _dispose() async {
     _instance = null;
     _logRecordSubscription?.cancel();
-    _connectivitySubscription?.cancel();
     _connectedSubject.close();
   }
 }

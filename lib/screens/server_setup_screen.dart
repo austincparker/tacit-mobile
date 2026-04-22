@@ -5,6 +5,7 @@ import 'package:tacit_mobile/bloc/config_bloc.dart';
 import 'package:tacit_mobile/model/tacit_status.dart';
 import 'package:tacit_mobile/screens/base_screen.dart';
 import 'package:tacit_mobile/screens/home_screen.dart';
+import 'package:tacit_mobile/screens/qr_scan_screen.dart';
 
 class ServerSetupScreen extends BaseScreen {
   const ServerSetupScreen({super.key, super.title = 'Connect to TACIT'});
@@ -126,7 +127,27 @@ class _ServerSetupScreenState extends BaseScreenState<ServerSetupScreen> {
                     ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const QrScanScreen()),
+                ),
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Scan QR Code'),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('or enter manually', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 16),
               Semantics(
                 label: 'Server URL',
                 hint: 'Enter the TACIT server address',

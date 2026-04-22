@@ -4,6 +4,7 @@ import 'package:tacit_mobile/api/tacit_api.dart';
 import 'package:tacit_mobile/bloc/config_bloc.dart';
 import 'package:tacit_mobile/model/tacit_status.dart';
 import 'package:tacit_mobile/screens/base_screen.dart';
+import 'package:tacit_mobile/screens/qr_scan_screen.dart';
 import 'package:tacit_mobile/screens/server_setup_screen.dart';
 
 class SettingsScreen extends BaseScreen {
@@ -136,9 +137,21 @@ class _SettingsScreenState extends BaseScreenState<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QrScanScreen()),
+                    ),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan New QR Code'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OutlinedButton.icon(
                     onPressed: () => pushScreen(const ServerSetupScreen()),
                     icon: const Icon(Icons.edit),
-                    label: const Text('Reconfigure'),
+                    label: const Text('Edit Manually'),
                   ),
                 ),
                 const SizedBox(height: 8),
